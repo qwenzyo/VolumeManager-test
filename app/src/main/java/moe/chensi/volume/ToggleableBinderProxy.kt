@@ -1,14 +1,15 @@
 package moe.chensi.volume
 
+import android.os.Build
 import android.os.IBinder
-import android.os.IInterface
 import android.os.Parcel
+import androidx.annotation.RequiresApi
 import com.flyjingfish.android_aop_annotation.ProceedJoinPoint
 import com.flyjingfish.android_aop_annotation.anno.AndroidAopPointCut
 import com.flyjingfish.android_aop_annotation.base.BasePointCut
 import org.joor.Reflect
 import rikka.shizuku.ShizukuBinderWrapper
-import java.io.FileDescriptor
+import java.util.concurrent.Executor
 
 @AndroidAopPointCut(EnableBinderProxyCut::class)
 @Target(AnnotationTarget.FUNCTION)
@@ -21,7 +22,7 @@ class EnableBinderProxyCut : BasePointCut<EnableBinderProxy> {
     }
 }
 
-class ToggleableBinderProxy(private val base: IBinder) : IBinder {
+class ToggleableBinderProxy(private val base: IBinder) : IBinder by base {
     companion object {
         private val _enabled: ThreadLocal<Boolean> = ThreadLocal<Boolean>.withInitial { false }
 
@@ -50,45 +51,22 @@ class ToggleableBinderProxy(private val base: IBinder) : IBinder {
 
     private val shizukuWrapper = ShizukuBinderWrapper(base)
 
-    override fun getInterfaceDescriptor(): String? {
-        return base.interfaceDescriptor
-    }
-
-    override fun pingBinder(): Boolean {
-        return base.pingBinder()
-    }
-
-    override fun isBinderAlive(): Boolean {
-        return base.isBinderAlive
-    }
-
-    override fun queryLocalInterface(descriptor: String): IInterface? {
-        return base.queryLocalInterface(descriptor)
-    }
-
-    override fun dump(fd: FileDescriptor, args: Array<out String?>?) {
-        return base.dump(fd, args)
-    }
-
-    override fun dumpAsync(
-        fd: FileDescriptor, args: Array<out String?>?
+    @RequiresApi(Build.VERSION_CODES.BAKLAVA)
+    override fun addFrozenStateChangeCallback(
+        executor: Executor,
+        callback: IBinder.FrozenStateChangeCallback
     ) {
-        return base.dumpAsync(fd, args)
+        base.addFrozenStateChangeCallback(executor, callback)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.BAKLAVA)
+    override fun removeFrozenStateChangeCallback(callback: IBinder.FrozenStateChangeCallback): Boolean {
+        return base.removeFrozenStateChangeCallback(callback)
     }
 
     override fun transact(
         code: Int, data: Parcel, reply: Parcel?, flags: Int
     ): Boolean {
         return (if (enabled) shizukuWrapper else base).transact(code, data, reply, flags)
-    }
-
-    override fun linkToDeath(recipient: IBinder.DeathRecipient, flags: Int) {
-        return base.linkToDeath(recipient, flags)
-    }
-
-    override fun unlinkToDeath(
-        recipient: IBinder.DeathRecipient, flags: Int
-    ): Boolean {
-        return base.unlinkToDeath(recipient, flags)
     }
 }
