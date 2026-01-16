@@ -15,7 +15,7 @@ import androidx.datastore.preferences.core.Preferences
 import moe.chensi.volume.data.App
 import moe.chensi.volume.data.AppPreferencesStore
 import moe.chensi.volume.data.Player
-import moe.chensi.volume.manager.PackageManagerProxy
+import moe.chensi.volume.system.PackageManagerProxy
 import org.joor.Reflect
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuProvider

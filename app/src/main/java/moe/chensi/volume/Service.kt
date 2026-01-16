@@ -12,6 +12,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.PixelFormat
 import android.media.AudioManager
+import android.os.Build
 import android.os.CountDownTimer
 import android.util.Log
 import android.view.Gravity
@@ -57,7 +58,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import moe.chensi.volume.compose.AppVolumeList
 import moe.chensi.volume.compose.TrackSlider
-import moe.chensi.volume.manager.ActivityTaskManagerProxy
+import moe.chensi.volume.system.ActivityTaskManagerProxy
 import moe.chensi.volume.ui.theme.VolumeManagerTheme
 import org.joor.Reflect
 import java.util.Objects
@@ -128,7 +129,8 @@ class Service : AccessibilityService() {
 
                 Log.i(TAG, "onAttachedToWindow")
 
-                if (windowManager.isCrossWindowBlurEnabled && isHardwareAccelerated) {
+                @Suppress("SpellCheckingInspection")
+                if (windowManager.isCrossWindowBlurEnabled && isHardwareAccelerated && Build.MODEL != "realme") {
                     background =
                         Reflect.on(rootSurfaceControl).call("createBackgroundBlurDrawable").apply {
                             call("setBlurRadius", 200)
