@@ -10,6 +10,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import moe.chensi.volume.data.App
@@ -47,7 +50,12 @@ class Manager(context: Context, dataStore: DataStore<Preferences>) {
         Reflect.onClass(ActivityManager::class.java).call("getService").get<Any>()
             .apply { ToggleableBinderProxy.wrap(this) }
     }
-    private val packageManager = PackageManagerProxy(context)
+    private val packageManager by lazy { PackageManagerProxy(context) }
+    private val defaultActivityIcon: ImageBitmap by lazy {
+        packageManager.defaultActivityIcon.toBitmap(
+            128, 128
+        ).asImageBitmap()
+    }
 
     private val appPreferencesStore = AppPreferencesStore(dataStore)
 
@@ -59,8 +67,8 @@ class Manager(context: Context, dataStore: DataStore<Preferences>) {
                 apps[app.packageName] = App(
                     app.packageName,
                     packageManager.loadLabel(app),
-                    packageManager.getDrawable(app.packageName, app.icon, app)
-                        ?: packageManager.defaultActivityIcon,
+                    packageManager.getDrawable(app.packageName, app.icon, app)?.toBitmap(128, 128)
+                        ?.asImageBitmap() ?: defaultActivityIcon,
                     appPreferencesStore.getOrCreate(app.packageName),
                     appPreferencesStore::save
                 )

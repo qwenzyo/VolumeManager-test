@@ -1,20 +1,18 @@
 package moe.chensi.volume.data
 
-import android.graphics.drawable.Drawable
 import android.icu.text.Collator
 import android.icu.text.Transliterator
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.graphics.ImageBitmap
 import java.util.Locale
 
 data class App(
     val packageName: String,
     val name: String,
-    val icon: Drawable,
+    val icon: ImageBitmap,
     private var preferences: AppPreferences,
     private val savePreferences: () -> Unit
 ) {
@@ -106,8 +104,6 @@ data class App(
             player.applyVolume(value)
         }
     }
-
-    val iconBitmap by lazy { icon.toBitmap(128, 128).asImageBitmap() }
 
     private var _isPlayer by mutableStateOf(preferences.isPlayer)
     var isPlayer: Boolean

@@ -11,9 +11,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import moe.chensi.volume.data.App
-import kotlin.collections.sortedWith
 
-fun LazyListScope.group(header: String, apps: List<App>, onChange: (() -> Unit)? = null) {
+fun LazyListScope.group(
+    header: String,
+    apps: List<App>,
+    canHide: Boolean = true,
+    onChange: (() -> Unit)? = null
+) {
     if (apps.isNotEmpty()) {
         item {
             Text(
@@ -25,7 +29,7 @@ fun LazyListScope.group(header: String, apps: List<App>, onChange: (() -> Unit)?
 
         items(
             items = apps.sortedWith(App.comparator), key = { app -> app.packageName }) { app ->
-            AppVolumeSlider(app, true, onChange)
+            AppVolumeSlider(app, true, canHide, onChange)
         }
     }
 }
@@ -43,7 +47,7 @@ fun AppVolumeList(
         if (!showAll) {
             items(items = apps.filter { app -> !app.hidden && app.players.isNotEmpty() }
                 .sortedWith(App.comparator), key = { app -> app.packageName }) { app ->
-                AppVolumeSlider(app, false, onChange)
+                AppVolumeSlider(app, showOptions = false, onChange = onChange)
             }
             return@LazyColumn
         }
@@ -69,9 +73,9 @@ fun AppVolumeList(
             }
         }
 
-        group("Active", activePlayers, onChange)
-        group("Inactive", inactivePlayers, onChange)
-        group("Hidden", hiddenPlayers, onChange)
-        group("Non-players", otherApps, onChange)
+        group("Active", activePlayers, onChange = onChange)
+        group("Inactive", inactivePlayers, onChange = onChange)
+        group("Hidden", hiddenPlayers, onChange = onChange)
+        group("Non-players", otherApps, canHide = false, onChange = onChange)
     }
 }

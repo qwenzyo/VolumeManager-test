@@ -11,7 +11,7 @@ import rikka.shizuku.ShizukuBinderWrapper
 class ActivityTaskManagerProxy(context: Context) {
     @SuppressLint("WrongConstant")
     val activityTaskManager: Reflect =
-        context.getSystemService(Context.ACTIVITY_TASK_SERVICE).run(Reflect::on)
+        context.getSystemService("activity_task").run(Reflect::on)
 
     init {
         val service = activityTaskManager.call("getService")

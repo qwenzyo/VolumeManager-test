@@ -22,7 +22,7 @@ import moe.chensi.volume.data.App
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppVolumeSlider(
-    app: App, menuVisible: Boolean, onChange: (() -> Unit)? = null
+    app: App, showOptions: Boolean, canHide: Boolean = true, onChange: (() -> Unit)? = null
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -42,7 +42,7 @@ fun AppVolumeSlider(
                 modifier = Modifier.padding(16.dp, 8.dp)
             ) {
                 Image(
-                    bitmap = app.iconBitmap,
+                    bitmap = app.icon,
                     contentDescription = "App icon",
                     modifier = Modifier.width(32.dp),
                     contentScale = ContentScale.FillWidth
@@ -52,15 +52,17 @@ fun AppVolumeSlider(
             }
         }
 
-        if (menuVisible) {
-            ToggleButton(
-                checked = app.hidden,
-                checkedIcon = Icons.Default.Visibility,
-                checkedDescription = "Unhide app",
-                uncheckedIcon = Icons.Default.VisibilityOff,
-                uncheckedDescription = "Hide app"
-            ) {
-                app.hidden = it
+        if (showOptions) {
+            if (canHide) {
+                ToggleButton(
+                    checked = app.hidden,
+                    checkedIcon = Icons.Default.Visibility,
+                    checkedDescription = "Unhide app",
+                    uncheckedIcon = Icons.Default.VisibilityOff,
+                    uncheckedDescription = "Hide app"
+                ) {
+                    app.hidden = it
+                }
             }
 
             ToggleButton(
