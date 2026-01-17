@@ -10,29 +10,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.drawable.toBitmap
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import moe.chensi.volume.data.App
 import moe.chensi.volume.data.AppPreferencesStore
-import moe.chensi.volume.data.Player
+import moe.chensi.volume.system.AudioPlaybackConfigurationProxy
 import moe.chensi.volume.system.PackageManagerProxy
 import org.joor.Reflect
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuProvider
-import java.lang.reflect.Method
 
 @SuppressLint("PrivateApi")
 class Manager(context: Context, dataStore: DataStore<Preferences>) {
-    companion object {
-        private val getClientPidMethod: Method =
-            AudioPlaybackConfiguration::class.java.getDeclaredMethod("getClientPid")
-        private val getPlayerProxyMethod: Method =
-            AudioPlaybackConfiguration::class.java.getDeclaredMethod("getPlayerProxy")
-    }
-
     enum class ShizukuStatus {
         Disconnected, PermissionDenied, Connected
     }
@@ -50,12 +39,7 @@ class Manager(context: Context, dataStore: DataStore<Preferences>) {
         Reflect.onClass(ActivityManager::class.java).call("getService").get<Any>()
             .apply { ToggleableBinderProxy.wrap(this) }
     }
-    private val packageManager by lazy { PackageManagerProxy(context) }
-    private val defaultActivityIcon: ImageBitmap by lazy {
-        packageManager.defaultActivityIcon.toBitmap(
-            128, 128
-        ).asImageBitmap()
-    }
+    private val packageManager by lazy { PackageManagerProxy.get(context) }
 
     private val appPreferencesStore = AppPreferencesStore(dataStore)
 
@@ -65,10 +49,9 @@ class Manager(context: Context, dataStore: DataStore<Preferences>) {
         for (app in packageManager.getInstalledApplicationsForAllUsers()) {
             if (!apps.containsKey(app.packageName)) {
                 apps[app.packageName] = App(
-                    app.packageName,
+                    packageManager,
+                    app,
                     packageManager.loadLabel(app),
-                    packageManager.getDrawable(app.packageName, app.icon, app)?.toBitmap(128, 128)
-                        ?.asImageBitmap() ?: defaultActivityIcon,
                     appPreferencesStore.getOrCreate(app.packageName),
                     appPreferencesStore::save
                 )
@@ -112,15 +95,15 @@ class Manager(context: Context, dataStore: DataStore<Preferences>) {
         val runningProcesses = activityManager.runningAppProcesses
 
         for (config in configs) {
-            val playerProxy = getPlayerProxyMethod.invoke(config) ?: continue
+            val proxy = AudioPlaybackConfigurationProxy(config)
 
-            val pid = getClientPidMethod.invoke(config) as Int
+            val pid = proxy.clientPid
             val process = runningProcesses.find { process -> process.pid == pid } ?: continue
 
             val packageName = process.pkgList[0] ?: continue
             val app = getApp(packageName) ?: continue
 
-            app.addPlayer(Player(config, playerProxy))
+            app.addPlayer(proxy)
         }
     }
 

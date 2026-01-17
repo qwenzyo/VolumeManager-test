@@ -9,19 +9,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import moe.chensi.volume.R
 import moe.chensi.volume.data.App
 
 fun LazyListScope.group(
-    header: String,
+    header: @Composable () -> String,
     apps: List<App>,
-    canHide: Boolean = true,
+    enableHide: Boolean = true,
     onChange: (() -> Unit)? = null
 ) {
     if (apps.isNotEmpty()) {
         item {
             Text(
-                text = header,
+                text = header(),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
             )
@@ -29,7 +31,7 @@ fun LazyListScope.group(
 
         items(
             items = apps.sortedWith(App.comparator), key = { app -> app.packageName }) { app ->
-            AppVolumeSlider(app, true, canHide, onChange)
+            AppVolumeSlider(app, true, enableHide, onChange)
         }
     }
 }
@@ -45,7 +47,7 @@ fun AppVolumeList(
         content?.invoke(this)
 
         if (!showAll) {
-            items(items = apps.filter { app -> !app.hidden && app.players.isNotEmpty() }
+            items(items = apps.filter { app -> !app.hidden && app.isPlaying }
                 .sortedWith(App.comparator), key = { app -> app.packageName }) { app ->
                 AppVolumeSlider(app, showOptions = false, onChange = onChange)
             }
@@ -60,7 +62,7 @@ fun AppVolumeList(
         for (app in apps) {
             if (app.isPlayer) {
                 if (!app.hidden) {
-                    if (app.players.isNotEmpty()) {
+                    if (app.isPlaying) {
                         activePlayers.add(app)
                     } else {
                         inactivePlayers.add(app)
@@ -73,9 +75,14 @@ fun AppVolumeList(
             }
         }
 
-        group("Active", activePlayers, onChange = onChange)
-        group("Inactive", inactivePlayers, onChange = onChange)
-        group("Hidden", hiddenPlayers, onChange = onChange)
-        group("Non-players", otherApps, canHide = false, onChange = onChange)
+        group({ stringResource(R.string.group_active) }, activePlayers, onChange = onChange)
+        group({ stringResource(R.string.group_inactive) }, inactivePlayers, onChange = onChange)
+        group({ stringResource(R.string.group_hidden) }, hiddenPlayers, onChange = onChange)
+        group(
+            { stringResource(R.string.group_other) },
+            otherApps,
+            enableHide = false,
+            onChange = onChange
+        )
     }
 }

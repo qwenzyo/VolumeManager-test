@@ -1,6 +1,6 @@
 package moe.chensi.volume.compose
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -12,16 +12,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -52,6 +47,14 @@ fun TrackSlider(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .clip(GenericShape { size, _ ->
+                addRoundRect(
+                    RoundRect(
+                        0f, 0f, size.width, size.height, cornerRadius = CornerRadius(cornerRadiusPx)
+                    )
+                )
+            })
+            .background(trackColor)
             .pointerInput(enabled) {
                 if (enabled) {
                     var startValue = 0f
@@ -74,33 +77,8 @@ fun TrackSlider(
                 }
             },
     ) {
-        Canvas(modifier = Modifier.matchParentSize()) {
-            // Draw track
-            drawRoundRect(
-                color = trackColor,
-                topLeft = Offset(0f, 0f),
-                size = size,
-                cornerRadius = CornerRadius(cornerRadiusPx)
-            )
-
-            clipPath(Path().apply {
-                addRoundRect(
-                    RoundRect(
-                        0f, 0f, size.width, size.height, CornerRadius(cornerRadiusPx)
-                    )
-                )
-            }) {
-                // Draw fill
-                drawRoundRect(
-                    color = fillColor, topLeft = Offset(0f, 0f), size = Size(
-                        fillWidthPercentage * size.width, size.height
-                    ), cornerRadius = CornerRadius(with(density) { 2.dp.toPx() })
-                )
-            }
-        }
-
         Box(
-            modifier = Modifier.align(Alignment.CenterStart)
+            modifier = Modifier.fillMaxWidth()
         ) {
             CompositionLocalProvider(LocalContentColor provides onTrackColor) {
                 content()
@@ -109,7 +87,7 @@ fun TrackSlider(
 
         Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .matchParentSize()
                 .clip(GenericShape { size, _ ->
                     addRoundRect(
                         RoundRect(
@@ -117,10 +95,11 @@ fun TrackSlider(
                             0f,
                             fillWidthPercentage * size.width,
                             size.height,
-                            cornerRadius = CornerRadius(cornerRadiusPx)
+                            cornerRadius = CornerRadius(with(density) { 2.dp.toPx() })
                         )
                     )
                 })
+                .background(fillColor)
         ) {
             CompositionLocalProvider(LocalContentColor provides onFillColor) {
                 content()

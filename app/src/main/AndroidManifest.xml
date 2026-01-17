@@ -5,6 +5,7 @@
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".MyApplication"
@@ -29,11 +30,10 @@
 
         <activity
             android:name=".PopupActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
             android:noHistory="true"
-            android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:label="@string/title_activity_popup"
             android:theme="@style/Theme.VolumeManager.Popup" />
 
         <service

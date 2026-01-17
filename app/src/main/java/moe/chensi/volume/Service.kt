@@ -127,10 +127,10 @@ class Service : AccessibilityService() {
             override fun onAttachedToWindow() {
                 super.onAttachedToWindow()
 
-                Log.i(TAG, "onAttachedToWindow")
+                Log.i(TAG, "onAttachedToWindow manufacturer: ${Build.MANUFACTURER}")
 
                 @Suppress("SpellCheckingInspection")
-                if (windowManager.isCrossWindowBlurEnabled && isHardwareAccelerated && Build.MODEL != "realme") {
+                if (windowManager.isCrossWindowBlurEnabled && isHardwareAccelerated && Build.MANUFACTURER != "realme") {
                     background =
                         Reflect.on(rootSurfaceControl).call("createBackgroundBlurDrawable").apply {
                             call("setBlurRadius", 200)
@@ -339,8 +339,6 @@ class Service : AccessibilityService() {
     override fun onInterrupt() {
         Log.i(TAG, "onInterrupt")
 
-        Toast.makeText(this, "Accessibility service died!", Toast.LENGTH_SHORT).show()
-
         unregisterReceiver(broadcastReceiver)
     }
 
@@ -370,11 +368,14 @@ class Service : AccessibilityService() {
             return false
         }
 
-        val packageName = activityTaskManager.getForegroundTask()
-        Log.i(TAG, "onKeyEvent packageName = $packageName")
-        val app = manager.apps[packageName]
-        if (app != null && app.disableVolumeButtons) {
-            return false
+        val task = activityTaskManager.getForegroundTask()
+        Log.i(TAG, "onKeyEvent foreground task: $task")
+
+        if (task != null) {
+            val app = manager.apps[task.app]
+            if (app != null && app.disableVolumeButtons) {
+                return false
+            }
         }
 
         when (event.keyCode) {

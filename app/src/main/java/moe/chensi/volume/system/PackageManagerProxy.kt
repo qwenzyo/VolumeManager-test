@@ -3,26 +3,40 @@ package moe.chensi.volume.system
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.graphics.drawable.Drawable
-import android.os.IBinder
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import moe.chensi.volume.EnableBinderProxy
+import moe.chensi.volume.ToggleableBinderProxy
 import org.joor.Reflect
-import rikka.shizuku.ShizukuBinderWrapper
+import java.util.WeakHashMap
 
-class PackageManagerProxy(context: Context) {
+class PackageManagerProxy private constructor(context: Context) {
+    companion object {
+        private val cache = WeakHashMap<Context, PackageManagerProxy>()
+
+        fun get(context: Context): PackageManagerProxy {
+            return cache.getOrPut(context) { PackageManagerProxy(context) }
+        }
+    }
+
     private val userManager = UserManagerProxy(context)
 
     private val packageManager = context.packageManager
     private val reflect = Reflect.on(packageManager)
 
     init {
-        val service = Reflect.onClass("android.app.ActivityThread").call("getPackageManager")
-        val remote = service.get<IBinder>("mRemote")
-        val wrapper = remote as? ShizukuBinderWrapper ?: ShizukuBinderWrapper(remote)
-        service.set("mRemote", wrapper)
+        val service =
+            Reflect.onClass("android.app.ActivityThread").call("getPackageManager").get<Any>()
+        ToggleableBinderProxy.wrap(service)
     }
 
-    val defaultActivityIcon
-        get() = packageManager.defaultActivityIcon
+    val defaultActivityIcon by lazy { packageManager.defaultActivityIcon }
 
+    val defaultActivityIconImageBitmap by lazy {
+        defaultActivityIcon.toBitmap(128, 128).asImageBitmap()
+    }
+
+    @EnableBinderProxy
     fun getInstalledApplicationsForAllUsers(): List<ApplicationInfo> {
         val apps = mutableMapOf<String, ApplicationInfo>()
 
@@ -36,10 +50,12 @@ class PackageManagerProxy(context: Context) {
         return apps.values.toList()
     }
 
+    @EnableBinderProxy
     fun getDrawable(packageName: String, resId: Int, appInfo: ApplicationInfo): Drawable? {
         return packageManager.getDrawable(packageName, resId, appInfo)
     }
 
+    @EnableBinderProxy
     fun loadLabel(appInfo: ApplicationInfo): String {
         return appInfo.loadLabel(packageManager).toString()
     }

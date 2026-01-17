@@ -2,11 +2,12 @@ package moe.chensi.volume.system
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.pm.ActivityInfo
-import android.os.IBinder
+import moe.chensi.volume.EnableBinderProxy
+import moe.chensi.volume.ToggleableBinderProxy
 import org.joor.Reflect
-import rikka.shizuku.ShizukuBinderWrapper
 
 class ActivityTaskManagerProxy(context: Context) {
     @SuppressLint("WrongConstant")
@@ -14,13 +15,14 @@ class ActivityTaskManagerProxy(context: Context) {
         context.getSystemService("activity_task").run(Reflect::on)
 
     init {
-        val service = activityTaskManager.call("getService")
-        val remote = service.get<IBinder>("mRemote")
-        val wrapper = remote as? ShizukuBinderWrapper ?: ShizukuBinderWrapper(remote)
-        service.set("mRemote", wrapper)
+        val service = activityTaskManager.call("getService").get<Any>()
+        ToggleableBinderProxy.wrap(service)
     }
 
-    fun getForegroundTask(): String? {
+    data class Task(val app: String, val activityName: ComponentName)
+
+    @EnableBinderProxy
+    fun getForegroundTask(): Task? {
         val tasks = activityTaskManager.call("getTasks", 1)
             .get<List<ActivityManager.RunningTaskInfo>>()
         if (tasks.isEmpty()) {
@@ -28,7 +30,10 @@ class ActivityTaskManagerProxy(context: Context) {
         }
 
         val taskInfo = tasks[0]
-        val topActivityInfo = Reflect.on(taskInfo).get<ActivityInfo?>("topActivityInfo")
-        return topActivityInfo?.packageName
+        val topActivity = taskInfo.topActivity ?: return null
+        val topActivityInfo =
+            Reflect.on(taskInfo).get<ActivityInfo?>("topActivityInfo") ?: return null
+
+        return Task(topActivityInfo.packageName, topActivity)
     }
 }

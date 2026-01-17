@@ -6,8 +6,12 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
@@ -113,6 +117,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    val powerManager by lazy { getSystemService(PowerManager::class.java)!! }
+    var isIgnoringBatteryOptimization by mutableStateOf(false)
+    private fun checkBatteryOptimization() {
+        isIgnoringBatteryOptimization =
+            powerManager.isIgnoringBatteryOptimizations(applicationInfo.packageName)
+    }
+
     @SuppressLint("DiscouragedPrivateApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,6 +131,8 @@ class MainActivity : ComponentActivity() {
 
         application = super.getApplication() as MyApplication
         val manager = application.manager
+
+        checkBatteryOptimization()
 
         setContent {
             var showAll by remember { mutableStateOf(false) }
@@ -131,8 +144,7 @@ class MainActivity : ComponentActivity() {
                             if (manager.shizukuStatus == Manager.ShizukuStatus.Connected) {
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Below,
-                                        12.dp
+                                        TooltipAnchorPosition.Below, 12.dp
                                     ),
                                     tooltip = { PlainTooltip { Text(if (showAll) "Hide inactive or hidden apps" else "Show all apps") } },
                                     state = rememberTooltipState()
@@ -169,27 +181,26 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            Manager.ShizukuStatus.PermissionDenied ->
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(
-                                        16.dp, Alignment.CenterVertically
-                                    )
-                                ) {
-                                    Text("Shizuku is installed and enabled")
-                                    Text(
-                                        textAlign = TextAlign.Center,
-                                        text = "Allow App Volume Manager to access Shizuku?"
-                                    )
+                            Manager.ShizukuStatus.PermissionDenied -> Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(
+                                    16.dp, Alignment.CenterVertically
+                                )
+                            ) {
+                                Text("Shizuku is installed and enabled")
+                                Text(
+                                    textAlign = TextAlign.Center,
+                                    text = "Allow App Volume Manager to access Shizuku?"
+                                )
 
-                                    Button(onClick = { Shizuku.requestPermission(0) }) {
-                                        Text(text = "Request permission")
-                                    }
+                                Button(onClick = { Shizuku.requestPermission(0) }) {
+                                    Text(text = "Request permission")
                                 }
+                            }
 
                             Manager.ShizukuStatus.Connected -> {
-                                AccessibilityService()
+                                ServiceStatus()
                                 AppVolumeList(manager.apps.values, showAll)
                             }
                         }
@@ -199,10 +210,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        checkBatteryOptimization()
+    }
+
+
     data class ErrorInfo(val message: String, val stack: String)
 
+    fun openBatterySettings() {
+        val intent = Intent(
+            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            Uri.fromParts("package", applicationInfo.packageName, null)
+        )
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+    }
+
     @Composable
-    fun AccessibilityService() {
+    fun ServiceStatus() {
         var permissionGranted by remember { mutableStateOf(false) }
         var serviceEnabled by remember { mutableStateOf(false) }
         var errorInfo by remember { mutableStateOf<ErrorInfo?>(null) }
@@ -254,6 +281,14 @@ class MainActivity : ComponentActivity() {
         Column {
             Text(text = "Permission granted: ${if (permissionGranted) "Yes" else "No"}")
             Text(text = "Service enabled: ${if (serviceEnabled) "Yes" else "No"}")
+        }
+
+        Log.i(TAG, "Manufacturer: ${Build.MANUFACTURER}")
+
+        if (!isIgnoringBatteryOptimization) {
+            Button(onClick = { openBatterySettings() }) {
+                Text(text = "Disable battery optimization")
+            }
         }
     }
 }

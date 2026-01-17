@@ -1,18 +1,28 @@
 package moe.chensi.volume.data
 
+import android.content.pm.ApplicationInfo
 import android.icu.text.Collator
 import android.icu.text.Transliterator
+import android.util.Log
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import moe.chensi.volume.system.AudioPlaybackConfigurationProxy
+import moe.chensi.volume.system.PackageManagerProxy
 import java.util.Locale
 
 data class App(
-    val packageName: String,
+    val packageManager: PackageManagerProxy,
+    val applicationInfo: ApplicationInfo,
     val name: String,
-    val icon: ImageBitmap,
     private var preferences: AppPreferences,
     private val savePreferences: () -> Unit
 ) {
@@ -76,7 +86,31 @@ data class App(
                 }
                 return defaultComparator
             }
+
+        val scope = CoroutineScope(Dispatchers.IO)
     }
+
+    val packageName: String
+        get() = applicationInfo.packageName
+
+    private var _icon by mutableStateOf<ImageBitmap?>(null)
+    private var _iconLoading = false
+    val icon: ImageBitmap?
+        get() {
+            if (!_iconLoading) {
+                _iconLoading = true
+                scope.launch {
+                    _icon = packageManager.getDrawable(
+                        packageName,
+                        applicationInfo.icon,
+                        applicationInfo
+                    )?.toBitmap(128, 128)?.asImageBitmap()
+                        ?: packageManager.defaultActivityIconImageBitmap
+                }
+            }
+
+            return _icon
+        }
 
     fun setPreferences(value: AppPreferences) {
         preferences = value
@@ -86,22 +120,40 @@ data class App(
         _disableVolumeButtons = preferences.disableVolumeButtons
     }
 
-    private val _players: MutableList<Player> = mutableStateListOf()
-    val players: List<Player> = _players
+    private val _players: MutableList<AudioPlaybackConfigurationProxy> = mutableStateListOf()
+    val players: List<AudioPlaybackConfigurationProxy> = _players
 
     fun clearPlayers() {
         _players.clear()
+        isPlaying = false
     }
 
-    fun addPlayer(player: Player) {
-        player.applyVolume(_volume)
-        _players.add(player)
+    fun addPlayer(config: AudioPlaybackConfigurationProxy) {
+        // Set app as player even if the player is released
         isPlayer = true
+
+        if (!config.hasPlayer) {
+            return
+        }
+
+        Log.d(
+            "AppVolManager",
+            "add player $packageName ${config.clientPid} ${config.playerTypeName} ${config.playerStateName}"
+        )
+
+        // Apply volume to potentially new player
+        config.setVolume(_volume)
+
+        _players.add(config)
+
+        if (config.isPlaying) {
+            isPlaying = true
+        }
     }
 
     fun applyVolume(value: Float) {
         for (player in players) {
-            player.applyVolume(value)
+            player.setVolume(value)
         }
     }
 
@@ -118,7 +170,10 @@ data class App(
             savePreferences()
         }
 
-    private var _volume by mutableStateOf(preferences.volume)
+    var isPlaying by mutableStateOf(false)
+        private set
+
+    private var _volume by mutableFloatStateOf(preferences.volume)
     var volume
         get() = _volume
         set(value) {
