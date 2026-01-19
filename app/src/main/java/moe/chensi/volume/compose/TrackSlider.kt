@@ -30,8 +30,8 @@ fun TrackSlider(
     enabled: Boolean = true,
     trackColor: Color = MaterialTheme.colorScheme.primaryContainer,
     onTrackColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
-    fillColor: Color = MaterialTheme.colorScheme.primary,
-    onFillColor: Color = MaterialTheme.colorScheme.onPrimary,
+    fillColor: Color = Color(0xFFFF9AA2),
+    onFillColor: Color = Color.Black,
     cornerRadius: Dp = 8.dp,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     content: @Composable BoxScope.() -> Unit = {}
@@ -107,4 +107,3 @@ fun TrackSlider(
         }
     }
 }
-
