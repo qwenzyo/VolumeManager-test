@@ -32,7 +32,7 @@ fun TrackSlider(
     onTrackColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     fillColor: Color = Color(0xFFFF9AA2),
     onFillColor: Color = Color.Black,
-    cornerRadius: Dp = 8.dp,
+    cornerRadius: Dp = 4.dp,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     content: @Composable BoxScope.() -> Unit = {}
 ) {
